@@ -1,0 +1,87 @@
+name: Release
+
+# release/1.2.0      -> Release
+# release/1.2.0-rc1  -> Release Candidate (pre-release)
+# Notes come from the "# <version>" section of Releases.md.
+
+on:
+  push:
+    tags:
+      - 'release/*'
+
+permissions:
+  contents: write
+
+jobs:
+  langs:
+    uses: ./.github/workflows/langs.yml
+
+  build-zips:
+    name: Build per-locale ZIPs (${{ matrix.lang }})
+    needs: langs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        lang: ${{ fromJSON(needs.langs.outputs.list) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set build variables (from tag)
+        shell: bash
+        run: echo "GIT_VER=${GITHUB_REF_NAME#release/}" >> "$GITHUB_ENV"
+
+      - name: Create release notes for package manifest
+        run: |
+          python3 .github/scripts/extract-release-notes.py "${{ env.GIT_VER }}" Releases.md > Notes.md
+          sed -n '1,120p' Notes.md
+
+      - uses: ./.github/actions/build-zips
+        with:
+          version: ${{ env.GIT_VER }}
+          lang: ${{ matrix.lang }}
+          notes-file: Notes.md
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ethos-gauges-${{ env.GIT_VER }}-${{ matrix.lang }}
+          path: dist/*.zip
+          if-no-files-found: error
+
+  create-release:
+    name: Create GitHub Release
+    needs: [build-zips]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set build variables (from tag)
+        shell: bash
+        run: |
+          GIT_VER="${GITHUB_REF_NAME#release/}"
+          if [[ $GIT_VER =~ ^[0-9]+\.[0-9]+\.[0-9]+-[A-Za-z0-9]+$ ]]; then
+            echo "GH_TYPE=Release Candidate" >> "$GITHUB_ENV"
+            echo "GH_FLAGS=--prerelease" >> "$GITHUB_ENV"
+          else
+            echo "GH_TYPE=Release" >> "$GITHUB_ENV"
+            echo "GH_FLAGS=" >> "$GITHUB_ENV"
+          fi
+          echo "GIT_VER=$GIT_VER" >> "$GITHUB_ENV"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: ./dist
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la ./dist
+
+      - name: Create release notes
+        run: python3 .github/scripts/extract-release-notes.py "${{ env.GIT_VER }}" Releases.md > Notes.md
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" dist/*.zip ${{ env.GH_FLAGS }} \
+            --notes-file Notes.md --title "Ethos Gauges - ${{ env.GH_TYPE }} ${{ env.GIT_VER }}"

@@ -1,0 +1,11 @@
+{
+  "manifestVersion": 1,
+  "name": "Ethos Gauges",
+  "key": "com.robthomson.ethos-gauges",
+  "version": "0.1.0",
+  "introduction": "A configurable gauge widget: pick a gauge style, a source and a min/max range per widget slot.",
+  "folder": "gauges",
+  "files": [
+    "gauges/**"
+  ]
+}

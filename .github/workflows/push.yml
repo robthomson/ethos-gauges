@@ -1,0 +1,39 @@
+name: Create ethos-gauges ZIP on Push
+
+on:
+  push:
+    branches:
+      - 'main'
+
+permissions:
+  contents: read
+
+jobs:
+  langs:
+    uses: ./.github/workflows/langs.yml
+
+  create-zip:
+    name: Build ZIP (${{ matrix.lang }})
+    needs: langs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        lang: ${{ fromJSON(needs.langs.outputs.list) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set build variables (commit-based version)
+        shell: bash
+        run: echo "GIT_VER=commit-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - uses: ./.github/actions/build-zips
+        with:
+          version: ${{ env.GIT_VER }}
+          lang: ${{ matrix.lang }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ethos-gauges-${{ env.GIT_VER }}-${{ matrix.lang }}
+          path: dist/*.zip
+          if-no-files-found: error

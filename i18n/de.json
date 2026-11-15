@@ -1,0 +1,21 @@
+{
+  "project": {
+    "name": "Anzeige"
+  },
+  "widget": {
+    "configure": "Quelle konfigurieren",
+    "type": "Anzeigetyp",
+    "source": "Quelle",
+    "min": "Minimum",
+    "max": "Maximum",
+    "color": "Farbe",
+    "show_title": "Titel anzeigen",
+    "show_limits": "Min/Max anzeigen",
+    "type_arc": "Bogen",
+    "type_half": "Halbbogen",
+    "type_ring": "Ring",
+    "type_hbar": "Balken horizontal",
+    "type_vbar": "Balken vertikal",
+    "type_needle": "Zeigerinstrument"
+  }
+}

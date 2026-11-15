@@ -1,0 +1,25 @@
+name: Languages
+
+# Reusable: lists the languages to build, one per i18n/<lang>.json.
+# Adding a language is adding its json file; no workflow changes needed.
+on:
+  workflow_call:
+    outputs:
+      list:
+        description: JSON array of language codes
+        value: ${{ jobs.langs.outputs.list }}
+
+jobs:
+  langs:
+    runs-on: ubuntu-latest
+    outputs:
+      list: ${{ steps.langs.outputs.list }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: langs
+        shell: bash
+        run: |
+          LIST=$(ls i18n/*.json 2>/dev/null | xargs -n1 basename | sed 's/\.json$//' | jq -R . | jq -sc .)
+          if [ -z "$LIST" ] || [ "$LIST" = "[]" ]; then LIST='["en"]'; fi
+          echo "list=$LIST" >> "$GITHUB_OUTPUT"
+          echo "languages: $LIST"

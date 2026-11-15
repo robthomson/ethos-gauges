@@ -1,0 +1,54 @@
+name: Build ethos-gauges zips
+description: >
+  Builds one installable zip per language (i18n/*.json), syntax-checks every
+  resolved .lua with luac5.4, validates each ethos_lua_manifest.json and names
+  the zips ethos-gauges-<version>-<lang>.zip in dist/.
+
+inputs:
+  version:
+    description: Version label (1.2.0, 1.2.0-rc1, PR-12, commit-abc1234 ...)
+    required: true
+  lang:
+    description: One language, or empty for every language
+    required: false
+    default: ''
+  notes-file:
+    description: Markdown release notes embedded in the manifest
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Lua 5.4
+      shell: bash
+      run: sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4
+
+    - name: Build zips
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        LANG_ONE: ${{ inputs.lang }}
+        NOTES: ${{ inputs.notes-file }}
+      run: |
+        set -euo pipefail
+        args=(--artifact-version "$VERSION" --output-dir dist)
+        if [ -n "$LANG_ONE" ]; then args+=(--lang "$LANG_ONE"); else args+=(--all-langs); fi
+        if [ -n "$NOTES" ]; then args+=(--release-notes-file "$NOTES"); fi
+        python bin/package/build_package.py "${args[@]}"
+
+    - name: Lua syntax check and manifest validation
+      shell: bash
+      run: |
+        set -euo pipefail
+        for z in dist/*.zip; do
+          d=$(mktemp -d); unzip -q "$z" -d "$d"
+          find "$d" -name '*.lua' -print0 | xargs -0 -n1 luac5.4 -p
+          python bin/package/validate_ethos_manifest_zip.py "$z"
+          mv "$z" "dist/ethos-$(basename "$z")"
+        done
+        ls -la dist

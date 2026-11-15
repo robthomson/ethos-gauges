@@ -1,0 +1,21 @@
+{
+  "project": {
+    "name": "Gauge"
+  },
+  "widget": {
+    "configure": "Configure a source",
+    "type": "Gauge type",
+    "source": "Source",
+    "min": "Minimum",
+    "max": "Maximum",
+    "color": "Color",
+    "show_title": "Show title",
+    "show_limits": "Show min/max",
+    "type_arc": "Arc",
+    "type_half": "Half arc",
+    "type_ring": "Ring",
+    "type_hbar": "Horizontal bar",
+    "type_vbar": "Vertical bar",
+    "type_needle": "Needle dial"
+  }
+}

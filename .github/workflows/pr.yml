@@ -1,0 +1,54 @@
+name: Create ethos-gauges ZIP on PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  langs:
+    uses: ./.github/workflows/langs.yml
+
+  # Per-language PR builds (mirrors push.yml), downloadable from the run
+  create-zip:
+    name: Build PR ZIP (${{ matrix.lang }})
+    needs: langs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        lang: ${{ fromJSON(needs.langs.outputs.list) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/build-zips
+        with:
+          version: PR-${{ github.event.pull_request.number }}
+          lang: ${{ matrix.lang }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ethos-gauges-PR-${{ github.event.pull_request.number }}-${{ matrix.lang }}
+          path: dist/*.zip
+          if-no-files-found: error
+
+  # A tag with no key is shown on the radio as raw "@i18n(...)@" text, and a
+  # language missing a key falls back silently, so both fail the PR.
+  i18n-keys:
+    name: i18n keys match en.json
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Compare keys
+        run: python bin/i18n/check_keys.py
